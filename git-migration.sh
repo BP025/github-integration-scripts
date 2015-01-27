@@ -13,7 +13,7 @@ EXEC_CMD=$EXEC_CMD"ruby $DIRPATH/move-file-to-subdir.rb "$SUBDIR' | '
 EXEC_CMD=$EXEC_CMD'GIT_INDEX_FILE=$GIT_INDEX_FILE.new '
 EXEC_CMD=$EXEC_CMD'git update-index --index-info && '
 EXEC_CMD=$EXEC_CMD'mv $GIT_INDEX_FILE.new $GIT_INDEX_FILE || true'
-git filter-branch -f --index-filter "$EXEC_CMD"
+git filter-branch -f --index-filter "$EXEC_CMD" -- --all
 
 # 第2引数で指定した数字分、コミットコメント内のIssue番号をずらす
 EXEC_CMD="ruby $DIRPATH/replace-issue-symbol-num.rb "
