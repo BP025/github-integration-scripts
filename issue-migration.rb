@@ -76,6 +76,10 @@ class Sawyer::Resource
   def closed?
     respond_to?(:state) && state == "closed"
   end
+
+  def pull_request?
+    respond_to?(:pull_request) && pull_request.present?
+  end
 end
 
 def generate_random_color
@@ -94,6 +98,8 @@ end
 
 def copy_issue_with_comments(client, dst_repo_name, src_issue, comments, milestone_num_offset, label)
   raise "コメント数が一致しません。(issue.comments: #{src_issue.comments}, comments.length: #{comments.length})" unless src_issue.comments == comments.length
+
+  return if src_issue.pull_request?
 
   if label.present?
     client.add_label(dst_repo_name, label, generate_random_color()) unless client.labels(dst_repo_name).map(&:name).include?(label)
@@ -191,6 +197,7 @@ created_issues = issues.map do |issue|
 
   copy_issue_with_comments(client, dst_repo_name, issue, comments, milestone_num_offset, label)
 end
+created_issues.compact!
 
 
 if opts.verbose?
