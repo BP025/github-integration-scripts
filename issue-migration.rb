@@ -9,6 +9,7 @@ require 'active_support/all'
 opts = Slop.parse(help: true) do |o|
   o.string '-u', '--user', 'GitHubアカウントID'
   o.string '-p', '--password', 'GitHubアカウントパスワード'
+  o.string '-l', '--label', '移行したIssueに付与するlabel'
   o.bool '-v', '--verbose', '詳細出力モード'
 end
 
@@ -77,6 +78,10 @@ class Sawyer::Resource
   end
 end
 
+def generate_random_color
+  rand(0x1000000).to_s(16).rjust(6, "0")
+end
+
 def copy_milestone(client, dst_repo_name, src_milestone)
   creator_memo = "_@#{src_milestone.creator.login} さんが #{src_milestone.created_at.getlocal} に作成。_\n\n"
   options = {}
@@ -87,8 +92,13 @@ def copy_milestone(client, dst_repo_name, src_milestone)
   created_milestone
 end
 
-def copy_issue_with_comments(client, dst_repo_name, src_issue, comments, milestone_num_offset)
+def copy_issue_with_comments(client, dst_repo_name, src_issue, comments, milestone_num_offset, label)
   raise "コメント数が一致しません。(issue.comments: #{src_issue.comments}, comments.length: #{comments.length})" unless src_issue.comments == comments.length
+
+  if label.present?
+    client.add_label(dst_repo_name, label, generate_random_color()) unless client.labels(dst_repo_name).map(&:name).include?(label)
+    src_issue.labels << client.label(dst_repo_name, label)
+  end
 
   creator_memo = "_@#{src_issue.user.login} さんが #{src_issue.created_at.getlocal} に作成。_\n\n"
   options = {}
@@ -123,6 +133,8 @@ error_exit_if_empty user_id, 'GitHubにログインするアカウントIDを指
 
 password = opts[:password]
 error_exit_if_empty password, 'GitHubにログインするアカウントパスワードを指定してください。'
+
+label = opts[:label]
 
 use_http_cache()
 
@@ -177,7 +189,7 @@ created_issues = issues.map do |issue|
     end
   end
 
-  copy_issue_with_comments(client, dst_repo_name, issue, comments, milestone_num_offset)
+  copy_issue_with_comments(client, dst_repo_name, issue, comments, milestone_num_offset, label)
 end
 
 
