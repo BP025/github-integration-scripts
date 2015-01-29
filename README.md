@@ -23,7 +23,12 @@ GitHubリポジトリ統合Script集
 GiHubリポジトリ Hoge/A, Hoge/B を Hoge/X に統合する場合、手順は以下のようになります。
 
 1. 統合先GitHubリポジトリ Hoge/X を作成する
-1. `bundle install --path vendor/bundle`
+1. この統合Script集を実行可能にする
+
+        git clone "https://github.com/BP025/github-integration-scripts.git"
+        cd github-integration-scripts
+        bundle install --path vendor/bundle
+
 1. Issue・Issueコメント・Milestoneを移行
     1. Hoge/A
 
@@ -87,13 +92,16 @@ Hoge/Cも統合する場合も、Issue番号をメモするのを忘れずにHog
         * Issue番号を移行後のものに置換
         * 移行元リポジトリ内へのリンクを移行後のリポジトリへのリンクに置換
         * コミットハッシュを含むリンクを削除
+    * 他の統合元リポジトリへのリンクは加工されません
+        * A,B -> X の統合を行う場合、Aのコミットコメント内にBへのリンクがあっても無視されます
 * タグ … ×
 
 # Issue・Issueコメント・Milestone
 
 統合先でのこれらの作成はGitHub上での操作が自動化されたようなものなのでいろいろ制限があります。
 
-* 本文 … ◯
+* 本文 … △
+    * gitリポジトリのコミットコメントと同様にIssue番号やリンクの加工を行っています
 * 作成日・作成者 … △
     * 作成日はscriptを実行した日時になります
     * 作成者はscriptを実行するときに指定したアカウントのユーザーになります
