@@ -121,6 +121,15 @@ Hoge/Cも統合する場合も、Issue番号をメモするのを忘れずにHog
 
 × 移行できません。gitで扱えるのでなんとかしてください。
 
+移行元の1つのWikiをそのまま統合先のWikiに持っていくだけなら以下のコマンドで可能です。統合先のWikiはHomeページだけで良いのであらかじめ作成しておいてください。
+
+```bash
+git clone https://github.com/Hoge/A.wiki.git
+cd A.wiki
+git remote add x-wiki https://github.com/Hoge/X.wiki.git
+git push -u -f x-wiki master
+```
+
 
 統合後の注意点
 ---
