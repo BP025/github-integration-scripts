@@ -66,6 +66,7 @@ end
 def print_comment(comment)
   puts "\tbody: #{comment.body}"
   puts "\tuser: #{comment.user.login}"
+  puts "\tcreated_at: #{comment.created_at}"
 end
 
 class Sawyer::Resource
@@ -96,7 +97,55 @@ def copy_milestone(client, dst_repo_name, src_milestone)
   created_milestone
 end
 
-def copy_issue_with_comments(client, dst_repo_name, src_issue, comments, milestone_num_offset, label)
+def internal_link?(uri, repo)
+  uri.host =~ /^([^.]+\.)*github\.com$/ && uri.path =~ %r(^/#{repo}/)
+end
+
+def replace_links(text, src_repo_name, dst_repo_name, issue_num_offset)
+  # Issueシンボル e.g. #1
+  text.gsub!(/(?<=#)([0-9]+)/) do
+    issue_num_offset + $1.to_i
+  end
+
+  # 内部リンクを抽出
+  links = URI.extract(text, ['http', 'https'])
+      .uniq
+      .map { |str_uri| [str_uri, URI.parse(str_uri)] }
+      .select { |str, uri| internal_link?(uri, src_repo_name) }
+      .sort_by { |str, uri| -str.length }
+
+  # 内部リンク全般 e.g. https://github.com/BP025/A/wiki
+  # リポジトリ名を置換
+  links.each do |link|
+    link[1].path.sub!(%r!^/#{src_repo_name}(/|$)!) { "/#{dst_repo_name}" + $1 }
+    text.gsub!(link[0], link[1].to_s)
+    link[0] = link[1].to_s
+  end
+
+  # Issueリンク e.g. https://github.com/BP025/A/issues/1
+  # 一つの文字列に置換を繰り返すため、数字の大きいものから処理する
+  issue_links = links.select { |str, uri| uri.path =~ %r|(?<=/issues/)([0-9]+)| }.sort_by do |str, uri|
+    _, n = *%r|.*/issues/([0-9]+)|.match(uri.path)
+    [-uri.path.length, -n.to_i]
+  end
+  issue_links.each do |str, uri|
+    uri.path.gsub!(%r|(?<=/issues/)([0-9]+)|) do
+      issue_num_offset + $1.to_i
+    end
+
+    text.gsub!(str, uri.to_s)
+  end
+
+  # コミットリンク e.g. https://github.com/BP025/B/commit/3ae6ab4df4edaa3eebb3537563c81d9cc5c43b7c
+  commit_links = links.select { |str, uri| uri.path =~ %r|/commit/| }
+  commit_links.each do |str, uri|
+    text.gsub!(str, '')
+  end
+
+  text
+end
+
+def copy_issue_with_comments(client, src_repo_name, dst_repo_name, src_issue, comments, milestone_num_offset, issue_num_offset, label)
   raise "コメント数が一致しません。(issue.comments: #{src_issue.comments}, comments.length: #{comments.length})" unless src_issue.comments == comments.length
 
   return if src_issue.pull_request?
@@ -111,12 +160,14 @@ def copy_issue_with_comments(client, dst_repo_name, src_issue, comments, milesto
   options[:labels] = src_issue.labels.map(&:name).join(",") if src_issue.labels.present?
   options[:assignee] = src_issue.assignee.login if src_issue.assignee.present?
   options[:milestone] = milestone_num_offset + src_issue.milestone.number if src_issue.milestone.present?
-  created_issue = client.create_issue(dst_repo_name, src_issue.title, creator_memo + src_issue.body, options)
+  body = creator_memo + replace_links(src_issue.body, src_repo_name, dst_repo_name, issue_num_offset)
+  created_issue = client.create_issue(dst_repo_name, src_issue.title, body, options)
   comments.each do |comment|
     created_issue = client.close_issue(dst_repo_name, created_issue.number) if src_issue.closed? && src_issue.closed_at < comment.created_at
 
     creator_memo = "_@#{comment.user.login} さんが #{comment.created_at.getlocal} にコメント。_\n\n"
-    client.add_comment(dst_repo_name, created_issue.number, creator_memo + comment.body)
+    body = creator_memo + replace_links(comment.body, src_repo_name, dst_repo_name, issue_num_offset)
+    client.add_comment(dst_repo_name, created_issue.number, body)
   end
 
   if src_issue.closed? && created_issue.open?
@@ -184,6 +235,7 @@ if opts.verbose?
   end
 end
 
+issue_num_offset = client.issues(dst_repo_name, state: :all).length
 created_issues = issues.map do |issue|
   comments = client.issue_comments(src_repo_name, issue.number)
   if opts.verbose?
@@ -195,7 +247,7 @@ created_issues = issues.map do |issue|
     end
   end
 
-  copy_issue_with_comments(client, dst_repo_name, issue, comments, milestone_num_offset, label)
+  copy_issue_with_comments(client, src_repo_name, dst_repo_name, issue, comments, milestone_num_offset, issue_num_offset, label)
 end
 created_issues.compact!
 

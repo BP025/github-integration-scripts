@@ -10,10 +10,10 @@ if old_repo_name.nil? || new_repo_name.nil?
 end
 
 def replace_repo_name_in_url(text, from, to)
-  URI.extract(text, ['http', 'https']).uniq.sort_by { |uri| uri.length }.each do |str_uri|
+  URI.extract(text, ['http', 'https']).uniq.sort_by { |uri| -uri.length }.each do |str_uri|
     uri = URI.parse(str_uri)
     if uri.host =~ /^([^.]+\.)*github\.com$/
-      uri.path.sub! from, to
+      uri.path.sub!(%r!^/#{from}(/|$)!) { "/#{to}" + $1 }
       text.gsub! str_uri, uri.to_s
     end
   end
