@@ -27,13 +27,13 @@ GiHubリポジトリ Hoge/A, Hoge/B を Hoge/X に統合する場合、手順は
 1. Issue・Issueコメント・Milestoneを移行
     1. Hoge/A
 
-            bundle exec ruby issue-migration.rb -u <GitHubアカウントID> -p <GitHubアカウントパスワード> Hoge/A Hoge/X
+            bundle exec ruby issue-migration.rb -u <GitHubアカウントID> -p <GitHubアカウントパスワード> -l A Hoge/A Hoge/X
 
         **Issue番号が何番まで作成されたかメモする**
 
     1. Hoge/B
 
-            bundle exec ruby issue-migration.rb -u <GitHubアカウントID> -p <GitHubアカウントパスワード> Hoge/B Hoge/X
+            bundle exec ruby issue-migration.rb -u <GitHubアカウントID> -p <GitHubアカウントパスワード> -l B Hoge/B Hoge/X
 
 1. gitリポジトリを移行
     1. Hoge/A
@@ -60,7 +60,6 @@ GiHubリポジトリ Hoge/A, Hoge/B を Hoge/X に統合する場合、手順は
 
 1. Hoge/Xへpush
 
-        cd ..
         git remote add integrated "https://github.com/Hoge/X.git"
         git push -u integrated master
 
