@@ -149,7 +149,11 @@ end
 def copy_issue_with_comments(client, src_repo_name, dst_repo_name, src_issue, comments, milestone_num_offset, issue_num_offset, label)
   raise "コメント数が一致しません。(issue.comments: #{src_issue.comments}, comments.length: #{comments.length})" unless src_issue.comments == comments.length
 
-  return if src_issue.pull_request?
+  if src_issue.pull_request?
+    client.add_label(dst_repo_name, "PullRequest", generate_random_color()) unless client.labels(dst_repo_name).map(&:name).include?("PullRequest")
+    src_issue.labels << client.label(dst_repo_name, "PullRequest")
+    sleep 0.5
+  end
 
   if label.present?
     client.add_label(dst_repo_name, label, generate_random_color()) unless client.labels(dst_repo_name).map(&:name).include?(label)
