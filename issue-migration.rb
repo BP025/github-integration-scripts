@@ -94,6 +94,7 @@ def copy_milestone(client, dst_repo_name, src_milestone)
   options[:description] = creator_memo + src_milestone.description
   options[:due_on] = src_milestone.due_on
   created_milestone = client.create_milestone(dst_repo_name, src_milestone.title, options)
+  sleep 0.5
   created_milestone
 end
 
@@ -153,6 +154,7 @@ def copy_issue_with_comments(client, src_repo_name, dst_repo_name, src_issue, co
   if label.present?
     client.add_label(dst_repo_name, label, generate_random_color()) unless client.labels(dst_repo_name).map(&:name).include?(label)
     src_issue.labels << client.label(dst_repo_name, label)
+    sleep 0.5
   end
 
   creator_memo = "_@#{src_issue.user.login} さんが #{src_issue.created_at.getlocal} に作成。_\n\n"
@@ -162,12 +164,15 @@ def copy_issue_with_comments(client, src_repo_name, dst_repo_name, src_issue, co
   options[:milestone] = milestone_num_offset + src_issue.milestone.number if src_issue.milestone.present?
   body = creator_memo + replace_links(src_issue.body, src_repo_name, dst_repo_name, issue_num_offset)
   created_issue = client.create_issue(dst_repo_name, src_issue.title, body, options)
+  sleep 0.5
   comments.each do |comment|
     created_issue = client.close_issue(dst_repo_name, created_issue.number) if src_issue.closed? && src_issue.closed_at < comment.created_at
+    sleep 0.5
 
     creator_memo = "_@#{comment.user.login} さんが #{comment.created_at.getlocal} にコメント。_\n\n"
     body = creator_memo + replace_links(comment.body, src_repo_name, dst_repo_name, issue_num_offset)
     client.add_comment(dst_repo_name, created_issue.number, body)
+    sleep 0.5
   end
 
   if src_issue.closed? && created_issue.open?
